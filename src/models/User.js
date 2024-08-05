@@ -1,29 +1,30 @@
 import mongoose from "mongoose";
-import bcrypt from "bcrypt";
 
 const userSchema = new mongoose.Schema(
   {
     id: { type: mongoose.Schema.Types.ObjectId },
     username: { type: String, required: true },
-    password: { type: String, required: true },
-    profileImage: { type: String, default: "" },
+    email: { type: String, required: true, unique: true },
+    token: { type: String, required: true },
+    books: [
+      {
+        id: { type: String, required: true },
+        title: { type: String, required: true },
+        description: { type: String, required: true },
+        genres: { type: [String], required: true },
+        img: { type: String, required: true },
+        pdf: { type: String },
+        rate: { type: String, required: true },
+        authors: { type: [String], required: true },
+        link: { type: String },
+      },
+    ],
   },
   {
     versionKey: false,
     timestamps: true,
   }
 );
-
-userSchema.pre("save", async function (next) {
-  try {
-    const saltRounds = 10;
-    const hashedPassword = await bcrypt.hash(this.password, saltRounds);
-    this.password = hashedPassword;
-    next();
-  } catch (error) {
-    next(error);
-  }
-});
 
 const user = mongoose.model("Users", userSchema);
 

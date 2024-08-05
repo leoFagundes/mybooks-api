@@ -1,5 +1,20 @@
 import user from "../models/User.js";
-import authenticateUser from "../services/authenticationService.js";
+import {
+  S3Client,
+  PutObjectCommand,
+  DeleteObjectCommand,
+} from "@aws-sdk/client-s3";
+import crypto from "crypto";
+
+const s3 = new S3Client({
+  credentials: {
+    accessKeyId: process.env.ACCESS_KEY_ID,
+    secretAccessKey: process.env.SECRET_ACCESS_KEY,
+  },
+  region: process.env.BUCKET_REGION,
+});
+
+const randomPdfName = (bytes = 32) => crypto.randomBytes(bytes).toString("hex");
 
 class UserController {
   static async getUsers(req, res) {
@@ -37,6 +52,56 @@ class UserController {
     }
   }
 
+  static async createPdfLink(req, res) {
+    try {
+      const { userName } = req.body;
+      const { originalname, buffer, mimetype } = req.file;
+      const randomString = randomPdfName();
+      const pdfExtension = ".pdf";
+
+      const fileNameWithoutExt = originalname.replace(pdfExtension, "");
+
+      const pdfName = `${userName}/${fileNameWithoutExt}${randomString}${pdfExtension}`;
+
+      const params = {
+        Bucket: process.env.BUCKET_NAME,
+        Key: pdfName,
+        Body: buffer,
+        ContentType: mimetype,
+      };
+      const command = new PutObjectCommand(params);
+      await s3.send(command);
+
+      res.status(200).json({
+        message: `https://mybooks-repositorie.s3.amazonaws.com/${pdfName}`,
+      });
+    } catch (error) {
+      res
+        .status(500)
+        .json({ message: `${error} - failed to create a new pdf link.` });
+    }
+  }
+
+  static async deletePdf(req, res) {
+    try {
+      const { pdfName } = req.body;
+      console.log(pdfName);
+
+      const params = {
+        Bucket: process.env.BUCKET_NAME,
+        Key: pdfName,
+      };
+      const command = new DeleteObjectCommand(params);
+      await s3.send(command);
+
+      res.status(200).json({
+        message: `Pdf ${pdfName} successfully deleted`,
+      });
+    } catch (error) {
+      res.status(500).json({ message: `${error} - failed to delete the pdf.` });
+    }
+  }
+
   static async updateUser(req, res) {
     try {
       const id = req.params.id;
@@ -58,24 +123,6 @@ class UserController {
       res
         .status(500)
         .json({ message: `${error.message} - failed to delete user.` });
-    }
-  }
-
-  static async loginUser(req, res) {
-    const { username, password } = req.body;
-
-    const authenticationResult = await authenticateUser(username, password);
-
-    if (authenticationResult.success) {
-      res.status(200).json({
-        message: `Login successfully. Welcome ${username}!`,
-        user: authenticationResult.user,
-      });
-    } else {
-      res.status(401).json({
-        message: "Authentication failed",
-        error: authenticationResult.message,
-      });
     }
   }
 }
