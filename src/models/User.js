@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { type } from "os";
 
 const userSchema = new mongoose.Schema(
   {
@@ -6,6 +7,7 @@ const userSchema = new mongoose.Schema(
     username: { type: String, required: true },
     email: { type: String, required: true, unique: true },
     token: { type: String, required: true },
+    profileImage: { type: String },
     books: [
       {
         id: { type: String, required: true },
@@ -14,6 +16,7 @@ const userSchema = new mongoose.Schema(
         genres: { type: [String], required: true },
         img: { type: String, required: true },
         pdf: { type: String },
+        collection: { type: String },
         rate: { type: String, required: true },
         authors: { type: [String], required: true },
         link: { type: String },

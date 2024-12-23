@@ -19,7 +19,16 @@ const randomPdfName = (bytes = 32) => crypto.randomBytes(bytes).toString("hex");
 class UserController {
   static async getUsers(req, res) {
     try {
-      const getUsers = await user.find({});
+      const getUsers = await user.aggregate([
+        {
+          $addFields: {
+            normalizedUsername: { $toLower: "$username" },
+          },
+        },
+        {
+          $sort: { normalizedUsername: 1 },
+        },
+      ]);
       res.status(200).json(getUsers);
     } catch (error) {
       res.status(500).json({ message: `${error} - failed to fetch users.` });
